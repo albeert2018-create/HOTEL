@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Zelasgo · Dashboard Ejecutivo 2025–2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#080c14;--bg2:#0d1320;--bg3:#111827;
+  --surface:#131c2e;--surface2:#1a2540;--surface3:#1f2d4a;
+  --border:rgba(99,140,255,0.12);--border2:rgba(99,140,255,0.22);
+  --accent:#4f8eff;--accent2:#7eb3ff;--accent3:#c2d8ff;
+  --gold:#f5c542;--gold2:#ffd97a;
+  --green:#22c98a;--green2:#56dba8;
+  --red:#f25c5c;--red2:#ff8a8a;--amber:#f0a030;
+  --text:#e8edf8;--text2:#9aafcc;--text3:#5a7090;
+  --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+  --r:10px;--r2:16px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.5;overflow-x:hidden}
+#bg-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.app{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:0 24px 60px}
+.header{padding:32px 0 24px;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.header-brand{display:flex;align-items:center;gap:14px}
+.logo-box{width:44px;height:44px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:16px;color:#fff;letter-spacing:-1px;flex-shrink:0}
+.header-title h1{font-size:22px;font-weight:600;letter-spacing:-0.5px}
+.header-title p{font-size:12px;color:var(--text3);margin-top:2px}
+.header-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.meta-pill{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:500;letter-spacing:.3px;border:1px solid var(--border2)}
+.pill-fira{background:rgba(79,142,255,0.12);color:var(--accent2);border-color:rgba(79,142,255,0.25)}
+.pill-front{background:rgba(34,201,138,0.1);color:var(--green2);border-color:rgba(34,201,138,0.2)}
+.pill-date{background:rgba(255,255,255,0.04);color:var(--text3);border-color:var(--border)}
+.pill-live{background:rgba(34,201,138,0.15);color:var(--green2);border-color:rgba(34,201,138,0.3);display:flex;align-items:center;gap:5px}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+
+/* STATUS BAR */
+.status-bar{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:16px;font-size:12px;color:var(--text3);flex-wrap:wrap}
+.status-bar.loading{border-color:rgba(240,160,48,0.3);background:rgba(240,160,48,0.05)}
+.status-bar.ok{border-color:rgba(34,201,138,0.25);background:rgba(34,201,138,0.05);color:var(--green2)}
+.status-bar.error{border-color:rgba(242,92,92,0.3);background:rgba(242,92,92,0.05);color:var(--red2)}
+.spinner{width:14px;height:14px;border:2px solid rgba(240,160,48,0.3);border-top-color:var(--amber);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* UPLOAD */
+.upload-zone{background:var(--surface);border:1.5px dashed var(--border2);border-radius:var(--r2);padding:20px 24px;margin-bottom:24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;transition:border-color .2s,background .2s;cursor:pointer}
+.upload-zone:hover,.upload-zone.drag-over{border-color:var(--accent);background:rgba(79,142,255,0.06)}
+.upload-icon{width:40px;height:40px;border-radius:10px;background:rgba(79,142,255,0.12);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.upload-text h3{font-size:14px;font-weight:500}
+.upload-text p{font-size:12px;color:var(--text3);margin-top:2px}
+.upload-btn{margin-left:auto;padding:8px 18px;background:rgba(79,142,255,0.15);color:var(--accent2);border:1px solid rgba(79,142,255,0.3);border-radius:8px;font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;white-space:nowrap}
+.upload-btn:hover{background:rgba(79,142,255,0.28)}
+.upload-progress{width:100%;margin-top:10px;display:none}
+.upload-progress-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.upload-progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:2px;transition:width .3s ease;width:0%}
+.upload-progress-text{font-size:11px;color:var(--text3);margin-top:6px}
+#file-input{display:none}
+.file-tags{display:flex;gap:8px;flex-wrap:wrap;width:100%;margin-top:4px}
+.file-tag{padding:4px 10px;background:rgba(79,142,255,0.1);border:1px solid rgba(79,142,255,0.2);border-radius:6px;font-size:11px;color:var(--accent3);display:flex;align-items:center;gap:6px}
+.file-tag .rm{cursor:pointer;color:var(--text3);transition:color .15s}.file-tag .rm:hover{color:var(--red)}
+
+/* TABS */
+.tabs-wrapper{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--border);margin-bottom:24px}
+.tabs{display:flex;gap:2px;overflow-x:auto;padding:12px 0 0;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab-btn{padding:10px 18px;border-radius:8px 8px 0 0;font-family:var(--font);font-size:12px;font-weight:500;color:var(--text3);background:transparent;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:all .2s;white-space:nowrap}
+.tab-btn:hover{color:var(--text2);background:rgba(255,255,255,0.03)}
+.tab-btn.active{color:var(--accent2);border-bottom-color:var(--accent);background:rgba(79,142,255,0.06)}
+.tab-content{display:none}.tab-content.active{display:block;animation:fadeIn .25s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* CARDS */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:18px 20px;position:relative;overflow:hidden;transition:border-color .2s,transform .15s}
+.kpi-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:var(--r2) var(--r2) 0 0}
+.kpi-card.c-accent::before{background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.kpi-card.c-green::before{background:linear-gradient(90deg,var(--green),var(--green2))}
+.kpi-card.c-red::before{background:linear-gradient(90deg,var(--red),#ff9a9a)}
+.kpi-card.c-gold::before{background:linear-gradient(90deg,var(--gold),var(--gold2))}
+.kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);font-weight:500;margin-bottom:8px}
+.kpi-value{font-size:26px;font-weight:600;letter-spacing:-1px;line-height:1}
+.kpi-sub{font-size:11px;margin-top:6px}
+.up{color:var(--green)}.dn{color:var(--red)}.neu{color:var(--text3)}
+
+/* PANELS */
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:20px 24px;margin-bottom:16px}
+.panel:hover{border-color:var(--border2)}
+.panel-title{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);font-weight:500;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.panel-title::before{content:'';width:3px;height:12px;background:var(--accent);border-radius:2px;flex-shrink:0}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px}
+.chart-box{position:relative;width:100%}
+
+/* TABLES */
+.data-table{width:100%;border-collapse:collapse;font-size:12px}
+.data-table th{text-align:left;padding:10px 12px;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border);white-space:nowrap}
+.data-table td{padding:9px 12px;border-bottom:1px solid rgba(99,140,255,0.06);color:var(--text2);vertical-align:middle}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:rgba(79,142,255,0.04);color:var(--text)}
+.num{text-align:right;font-family:var(--mono);font-size:11px}
+.code{font-family:var(--mono);color:var(--text3);font-size:10px}
+.rank{font-family:var(--mono);color:var(--text3);font-size:11px;width:28px}
+
+/* BADGES */
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:500;font-family:var(--mono)}
+.badge-up{background:rgba(34,201,138,0.12);color:var(--green2);border:1px solid rgba(34,201,138,0.2)}
+.badge-dn{background:rgba(242,92,92,0.12);color:var(--red2);border:1px solid rgba(242,92,92,0.2)}
+.badge-neu{background:rgba(255,255,255,0.05);color:var(--text3);border:1px solid var(--border)}
+
+/* FILTERS */
+.filter-bar{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
+.filter-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+.fsel{padding:7px 12px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:12px;cursor:pointer;outline:none;transition:border-color .2s}
+.fsel:hover,.fsel:focus{border-color:var(--accent)}
+.fsel option{background:var(--bg3)}
+
+/* HOTEL CARDS */
+.hotel-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2);padding:18px;position:relative;overflow:hidden}
+.hotel-card.fira::after{content:'';position:absolute;top:0;right:0;width:80px;height:80px;background:radial-gradient(circle,rgba(79,142,255,0.15) 0%,transparent 70%)}
+.hotel-card.front::after{content:'';position:absolute;top:0;right:0;width:80px;height:80px;background:radial-gradient(circle,rgba(34,201,138,0.15) 0%,transparent 70%)}
+.hotel-name{font-size:11px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;font-weight:500}
+.hotel-card.fira .hotel-name{color:var(--accent2)}
+.hotel-card.front .hotel-name{color:var(--green2)}
+.hotel-big{font-size:28px;font-weight:600;letter-spacing:-1px;line-height:1;margin-bottom:4px}
+.hotel-sub{font-size:11px;color:var(--text3);margin-bottom:10px}
+.prog-bar{height:4px;background:rgba(255,255,255,0.05);border-radius:2px;overflow:hidden;margin-top:8px}
+.prog-fill{height:100%;border-radius:2px;transition:width .7s ease}
+
+/* LEGEND */
+.legend-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3)}
+.leg-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.leg-line{width:20px;height:2px;border-radius:1px;flex-shrink:0}
+
+/* DEPT BARS */
+.dept-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.dept-code{font-family:var(--mono);font-size:11px;color:var(--accent2);width:28px;flex-shrink:0}
+.dept-name{font-size:12px;color:var(--text2);width:170px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dept-bars{flex:1;display:flex;flex-direction:column;gap:3px}
+.dept-bar{height:5px;border-radius:3px;transition:width .6s ease;max-width:100%}
+.dept-vals{font-family:var(--mono);font-size:10px;color:var(--text3);text-align:right;width:80px;flex-shrink:0}
+
+/* SLIDES */
+.slide{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:36px;min-height:480px;animation:fadeIn .3s ease}
+.slide-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.slide-nav-btn{padding:8px 20px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;transition:all .2s}
+.slide-nav-btn:hover{border-color:var(--accent);color:var(--text)}
+.slide-nav-btn:disabled{opacity:.3;cursor:default}
+.slide-dots{display:flex;gap:6px}
+.slide-dot{width:6px;height:6px;border-radius:3px;background:var(--border2);transition:all .25s;cursor:pointer}
+.slide-dot.active{width:20px;background:var(--accent)}
+.slide-number{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:16px}
+.slide-title{font-size:30px;font-weight:600;letter-spacing:-1px;margin-bottom:6px;line-height:1.2}
+.slide-subtitle{font-size:13px;color:var(--text3);margin-bottom:28px}
+
+/* ALERTS */
+.alert{padding:14px 16px;border-radius:var(--r);margin-bottom:10px;border-left:3px solid}
+.alert-red{background:rgba(242,92,92,0.07);border-color:var(--red)}
+.alert-green{background:rgba(34,201,138,0.07);border-color:var(--green)}
+.alert-amber{background:rgba(240,160,48,0.07);border-color:var(--amber)}
+.alert-blue{background:rgba(79,142,255,0.07);border-color:var(--accent)}
+.alert-title{font-size:12px;font-weight:600;margin-bottom:4px}
+.alert-red .alert-title{color:var(--red2)}
+.alert-green .alert-title{color:var(--green2)}
+.alert-amber .alert-title{color:var(--gold2)}
+.alert-blue .alert-title{color:var(--accent2)}
+.alert p{font-size:12px;color:var(--text2);line-height:1.5}
+
+/* EXPORT BTNS */
+.export-btn{padding:8px 14px;background:rgba(79,142,255,0.1);border:1px solid rgba(79,142,255,0.25);border-radius:8px;color:var(--accent2);font-family:var(--font);font-size:11px;font-weight:500;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:5px}
+.export-btn:hover{background:rgba(79,142,255,0.2)}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+@media(max-width:700px){.g2,.g3,.g4{grid-template-columns:1fr}.header{flex-direction:column;align-items:flex-start}}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-brand">
+      <div class="logo-box">ZS</div>
+      <div class="header-title">
+        <h1>Dashboard Ejecutivo de Consumos</h1>
+        <p>Zelasgo S.L.U · Fira Congress &amp; Frontair Congress</p>
+      </div>
+    </div>
+    <div class="header-meta">
+      <span class="meta-pill pill-fira">Fira F4·F7</span>
+      <span class="meta-pill pill-front">Frontair Z4·Z7</span>
+      <span class="meta-pill pill-live"><span class="live-dot"></span>Supabase Live</span>
+      <span class="meta-pill pill-date" id="update-date">–</span>
+      <button class="export-btn" onclick="exportCSV()">↓ CSV</button>
+    </div>
+  </div>
+
+  <!-- STATUS -->
+  <div class="status-bar loading" id="status-bar">
+    <div class="spinner"></div>
+    <span id="status-msg">Conectando con Supabase...</span>
+  </div>
+
+  <!-- UPLOAD -->
+  <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+    <div class="upload-icon">📂</div>
+    <div class="upload-text">
+      <h3>Cargar nuevos meses</h3>
+      <p>Arrastra excels — formato Noray: hotel FIRA (F4/F7) o FRONT (Z4/Z7)</p>
+    </div>
+    <button class="upload-btn" onclick="event.stopPropagation();document.getElementById('file-input').click()">Seleccionar archivos</button>
+    <input type="file" id="file-input" multiple accept=".xlsx,.xls" onchange="handleFiles(this.files)">
+    <div class="upload-progress" id="upload-progress">
+      <div class="upload-progress-bar"><div class="upload-progress-fill" id="prog-fill"></div></div>
+      <div class="upload-progress-text" id="prog-text">Procesando...</div>
+    </div>
+    <div class="file-tags" id="file-tags"></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs-wrapper">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('overview',this)">Resumen</button>
+      <button class="tab-btn" onclick="switchTab('hotels',this)">Por Hotel</button>
+      <button class="tab-btn" onclick="switchTab('families',this)">Familias</button>
+      <button class="tab-btn" onclick="switchTab('special',this)">Fam. 87·90·93</button>
+      <button class="tab-btn" onclick="switchTab('depts',this)">Desayuno / Rest.</button>
+      <button class="tab-btn" onclick="switchTab('monthly',this)">Evolución</button>
+      <button class="tab-btn" onclick="switchTab('top20',this)">Top 20 Productos</button>
+      <button class="tab-btn" onclick="switchTab('pres',this)">Presentación</button>
+    </div>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div id="tab-overview" class="tab-content active">
+    <div class="kpi-grid" id="kpi-grid"></div>
+    <div class="g2">
+      <div class="panel">
+        <div class="panel-title">Consumo por familia 2025 vs 2026</div>
+        <div class="legend-row">
+          <span class="leg-item"><span class="leg-dot" style="background:#4f8eff"></span>2025</span>
+          <span class="leg-item"><span class="leg-dot" style="background:#22c98a"></span>2026</span>
+        </div>
+        <div class="chart-box" style="height:280px"><canvas id="ch-fam-ov" role="img" aria-label="Familias overview"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Peso relativo por familia 2026</div>
+        <div class="chart-box" style="height:280px"><canvas id="ch-donut" role="img" aria-label="Donut familias"></canvas></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Impacto por departamento</div>
+      <div id="dept-bars"></div>
+    </div>
+  </div>
+
+  <!-- HOTELS -->
+  <div id="tab-hotels" class="tab-content">
+    <div class="filter-bar">
+      <span class="filter-label">Mes:</span>
+      <select class="fsel" id="sel-h-mes" onchange="renderHotels()"><option value="all">Todos</option></select>
+    </div>
+    <div class="kpi-grid" id="hotel-kpis"></div>
+    <div class="g2">
+      <div class="panel">
+        <div class="panel-title">Fira Congress — evolución mensual</div>
+        <div class="chart-box" style="height:220px"><canvas id="ch-fira-m" role="img" aria-label="Fira mensual"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Frontair Congress — evolución mensual</div>
+        <div class="chart-box" style="height:220px"><canvas id="ch-front-m" role="img" aria-label="Front mensual"></canvas></div>
+      </div>
+    </div>
+    <div class="panel"><div class="panel-title">Detalle por hotel y mes</div>
+      <div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Hotel</th><th>Mes</th><th class="num">2025 €</th><th class="num">2026 €</th><th class="num">Δ €</th><th class="num">Δ %</th><th>Estado</th></tr></thead><tbody id="hotel-tbody"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- FAMILIES -->
+  <div id="tab-families" class="tab-content">
+    <div class="filter-bar">
+      <span class="filter-label">Hotel:</span>
+      <select class="fsel" id="sel-f-hotel" onchange="renderFamilies()"><option value="all">Ambos</option><option value="FIRA">Fira</option><option value="FRONT">Frontair</option></select>
+      <span class="filter-label">Mes:</span>
+      <select class="fsel" id="sel-f-mes" onchange="renderFamilies()"><option value="all">Todos</option></select>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Impacto por familia — 2025 vs 2026</div>
+      <div class="legend-row"><span class="leg-item"><span class="leg-dot" style="background:#4f8eff"></span>2025</span><span class="leg-item"><span class="leg-dot" style="background:#22c98a"></span>2026</span></div>
+      <div class="chart-box" style="height:300px"><canvas id="ch-fam-bar" role="img" aria-label="Familias barra"></canvas></div>
+    </div>
+    <div class="panel"><div class="panel-title">Variación por familia</div>
+      <div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Cód.</th><th>Familia</th><th class="num">2025 €</th><th class="num">2026 €</th><th class="num">Δ €</th><th class="num">Δ %</th><th>Var.</th></tr></thead><tbody id="fam-tbody"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- SPECIAL -->
+  <div id="tab-special" class="tab-content">
+    <div class="filter-bar">
+      <span class="filter-label">Hotel:</span>
+      <select class="fsel" id="sel-sp-hotel" onchange="renderSpecial()"><option value="all">Ambos</option><option value="FIRA">Fira</option><option value="FRONT">Frontair</option></select>
+    </div>
+    <div class="g3" id="sp-kpis"></div>
+    <div class="panel">
+      <div class="panel-title">Evolución mensual — Familias 87, 90, 93</div>
+      <div class="legend-row">
+        <span class="leg-item"><span class="leg-line" style="background:#4f8eff"></span>87 Comida '26</span>
+        <span class="leg-item"><span class="leg-line" style="background:#4f8eff;opacity:.4"></span>87 '25</span>
+        <span class="leg-item"><span class="leg-line" style="background:#22c98a"></span>90 Prec. '26</span>
+        <span class="leg-item"><span class="leg-line" style="background:#22c98a;opacity:.4"></span>90 '25</span>
+        <span class="leg-item"><span class="leg-line" style="background:#f5c542"></span>93 Pan. '26</span>
+        <span class="leg-item"><span class="leg-line" style="background:#f5c542;opacity:.4"></span>93 '25</span>
+      </div>
+      <div class="chart-box" style="height:300px"><canvas id="ch-sp-line" role="img" aria-label="Especiales línea"></canvas></div>
+    </div>
+    <div class="g2">
+      <div class="panel"><div class="panel-title">Fira — Fam. 87·90·93</div><div style="overflow-x:auto"><table class="data-table" id="sp-fira"></table></div></div>
+      <div class="panel"><div class="panel-title">Frontair — Fam. 87·90·93</div><div style="overflow-x:auto"><table class="data-table" id="sp-front"></table></div></div>
+    </div>
+  </div>
+
+  <!-- DEPTS -->
+  <div id="tab-depts" class="tab-content">
+    <div class="g4" id="dept-cards"></div>
+    <div class="g2">
+      <div class="panel"><div class="panel-title">Desayuno vs Restaurante — mensual</div>
+        <div class="legend-row">
+          <span class="leg-item"><span class="leg-dot" style="background:#4f8eff"></span>Des. 2025</span>
+          <span class="leg-item"><span class="leg-dot" style="background:#7eb3ff;opacity:.7"></span>Des. 2026</span>
+          <span class="leg-item"><span class="leg-dot" style="background:#22c98a"></span>Rest. 2025</span>
+          <span class="leg-item"><span class="leg-dot" style="background:#56dba8;opacity:.7"></span>Rest. 2026</span>
+        </div>
+        <div class="chart-box" style="height:260px"><canvas id="ch-dept-grp" role="img" aria-label="Dept grouped"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Split Fira: F4 vs F7</div>
+        <div class="chart-box" style="height:110px"><canvas id="ch-fira-split" role="img" aria-label="Fira split"></canvas></div>
+        <div class="panel-title" style="margin-top:20px">Split Frontair: Z4 vs Z7</div>
+        <div class="chart-box" style="height:110px"><canvas id="ch-front-split" role="img" aria-label="Front split"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MONTHLY -->
+  <div id="tab-monthly" class="tab-content">
+    <div class="panel"><div class="panel-title">Evolución total — Fira + Frontair</div>
+      <div class="legend-row"><span class="leg-item"><span class="leg-line" style="background:#4f8eff"></span>2025</span><span class="leg-item"><span class="leg-line" style="background:#22c98a"></span>2026</span></div>
+      <div class="chart-box" style="height:240px"><canvas id="ch-tot-line" role="img" aria-label="Total línea"></canvas></div>
+    </div>
+    <div class="g2">
+      <div class="panel"><div class="panel-title">Variación absoluta mensual (€)</div>
+        <div class="chart-box" style="height:200px"><canvas id="ch-var-abs" role="img" aria-label="Var abs"></canvas></div>
+      </div>
+      <div class="panel"><div class="panel-title">Variación relativa mensual (%)</div>
+        <div class="chart-box" style="height:200px"><canvas id="ch-var-pct" role="img" aria-label="Var pct"></canvas></div>
+      </div>
+    </div>
+    <div class="panel"><div class="panel-title">Tabla evolutiva</div>
+      <div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Mes</th><th class="num">Fira 25</th><th class="num">Fira 26</th><th class="num">Δ Fira</th><th class="num">Front 25</th><th class="num">Front 26</th><th class="num">Δ Front</th><th class="num">Total 25</th><th class="num">Total 26</th><th class="num">Δ Total</th></tr></thead><tbody id="monthly-tbody"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- TOP 20 -->
+  <div id="tab-top20" class="tab-content">
+    <div class="filter-bar">
+      <span class="filter-label">Hotel:</span>
+      <select class="fsel" id="sel-t-hotel" onchange="renderTop20()"><option value="ALL">Ambos</option><option value="FIRA">Fira</option><option value="FRONT">Frontair</option></select>
+      <span class="filter-label">Familia:</span>
+      <select class="fsel" id="sel-t-fam" onchange="renderTop20()">
+        <option value="92">92 – Lácteos/Embutidos</option>
+        <option value="91">91 – Fruta y Verdura</option>
+        <option value="87">87 – Comida</option>
+        <option value="88">88 – Carnes</option>
+        <option value="90">90 – Precocinados</option>
+        <option value="89">89 – Pescados</option>
+        <option value="93">93 – Panadería</option>
+        <option value="85">85 – Bebidas</option>
+        <option value="86">86 – Vinos/Cavas</option>
+      </select>
+      <span class="filter-label">Ordenar:</span>
+      <select class="fsel" id="sel-t-sort" onchange="renderTop20()">
+        <option value="imp26">Mayor consumo 2026</option>
+        <option value="imp25">Mayor consumo 2025</option>
+        <option value="var_abs">Mayor incremento €</option>
+        <option value="var_pct">Mayor variación %</option>
+      </select>
+    </div>
+    <div class="panel"><div class="panel-title">Top 20 por consumo</div>
+      <div class="legend-row"><span class="leg-item"><span class="leg-dot" style="background:#4f8eff"></span>2025</span><span class="leg-item"><span class="leg-dot" style="background:#22c98a"></span>2026</span></div>
+      <div class="chart-box" id="top20-chart-wrap" style="height:400px"><canvas id="ch-top20" role="img" aria-label="Top 20 productos"></canvas></div>
+    </div>
+    <div class="panel"><div class="panel-title">Detalle</div>
+      <div style="overflow-x:auto"><table class="data-table"><thead><tr><th class="rank">#</th><th class="code">Cód.</th><th>Producto</th><th class="num">2025 €</th><th class="num">2026 €</th><th class="num">Δ €</th><th class="num">Δ %</th></tr></thead><tbody id="top20-tbody"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- PRESENTATION -->
+  <div id="tab-pres" class="tab-content">
+    <div class="slide-nav">
+      <button class="slide-nav-btn" id="prev-btn" onclick="prevSlide()" disabled>← Anterior</button>
+      <div class="slide-dots" id="slide-dots"></div>
+      <button class="slide-nav-btn" id="next-btn" onclick="nextSlide()">Siguiente →</button>
+    </div>
+    <div id="slide-container"></div>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+// ════════════════════════════════════════════
+// CONFIGURACIÓN SUPABASE
+// ════════════════════════════════════════════
+const SUPABASE_URL  = 'https://zozqdnvvmajvqojtomur.supabase.co';   // ← reemplazar
+const SUPABASE_ANON = 'sb_publishable_LdS0FApgPLyRwysEP5eddA_yPZx1nhv';   // ← reemplazar
+
+const SB = {
+  async get(table, params=''){
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}${params}`,{
+      headers:{'apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON,'Content-Type':'application/json'}
+    });
+    if(!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+    return r.json();
+  },
+  async post(table, rows){
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`,{
+      method:'POST',
+      headers:{'apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body: JSON.stringify(rows)
+    });
+    if(!r.ok){ const t=await r.text(); throw new Error(`${r.status}: ${t}`); }
+    return true;
+  }
+};
+
+// ════════════════════════════════════════════
+// ESTADO GLOBAL
+// ════════════════════════════════════════════
+const MONTH_LABELS = {ENE:'Enero',FEB:'Febrero',MAR:'Marzo',ABR:'Abril',MAY:'Mayo',JUN:'Junio',JUL:'Julio',AGO:'Agosto',SEP:'Septiembre',OCT:'Octubre',NOV:'Noviembre',DIC:'Diciembre'};
+const CAT_NAMES    = {'85':'85 – Bebidas','87':'87 – Comida','89':'89 – Pescados','90':'90 – Precocinados','91':'91 – Fruta/Verd.','92':'92 – Lácteos/Emb.','93':'93 – Panadería','84':'84 – Beb.Alcoh.','86':'86 – Vinos/Cavas','88':'88 – Carnes','11':'11 – Lácteos'};
+const CAT_ORDER    = ['92','91','87','88','90','89','93','85','86','84','11'];
+
+// Cache de datos ya cargados de Supabase
+let CACHE = {
+  monthly:    {},   // {FIRA_ENE: {y25:x, y26:x}, ...}
+  monthly_dept:{},  // {FIRA_ENE_F4: ...}
+  monthly_cat: {},  // {FIRA_ENE_cat87: ...}
+  top_products:{},  // {87_FIRA: [...]}
+  dept_totals: {},  // {F4: {name, y25, y26}}
+  fam_totals:  {},  // {87: {name, y25, y26, by_hotel}}
+  months_available: [],
+  last_fetch: null
+};
+
+const charts = {};
+function mkChart(id,cfg){
+  if(charts[id]){charts[id].destroy();delete charts[id];}
+  const c=document.getElementById(id);if(!c)return;
+  charts[id]=new Chart(c,cfg);return charts[id];
+}
+const COPTS = {responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}};
+function lDs(label,data,color,dashed=false){return{label,data,borderColor:color,backgroundColor:color+'18',fill:false,tension:.4,pointRadius:4,pointBackgroundColor:color,borderDash:dashed?[6,4]:[],borderWidth:dashed?1.5:2,pointStyle:dashed?'triangle':'circle'};}
+function bDs(label,data,color,a=1){return{label,data,backgroundColor:color+(a<1?'99':''),borderRadius:4,borderSkipped:false};}
+
+function fmt(n,d=0){return new Intl.NumberFormat('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d}).format(Math.round(n*Math.pow(10,d))/Math.pow(10,d));}
+function fmtE(n){return fmt(n)+'€';}
+function pct(a,b){return a===0?0:((b-a)/Math.abs(a)*100);}
+function pctS(a,b){const p=pct(a,b);return(p>=0?'+':'')+p.toFixed(1)+'%';}
+function delta(a,b){const v=b-a;return`<span class="${v>=0?'up':'dn'}">${v>=0?'+':''}${fmtE(v)}</span>`;}
+function pbadge(a,b){const p=pct(a,b);const c=p>3?'badge-up':p<-3?'badge-dn':'badge-neu';return`<span class="badge ${c}">${pctS(a,b)}</span>`;}
+
+function setStatus(type, msg){
+  const bar=document.getElementById('status-bar');
+  const msgEl=document.getElementById('status-msg');
+  bar.className='status-bar '+type;
+  msgEl.textContent=msg;
+  if(type==='ok') bar.querySelector('.spinner')?.remove();
+  else if(!bar.querySelector('.spinner')&&type==='loading'){
+    const sp=document.createElement('div');sp.className='spinner';bar.prepend(sp);
+  }
+}
+
+// ════════════════════════════════════════════
+// CARGA DE DATOS DESDE SUPABASE
+// ════════════════════════════════════════════
+async function loadAllData(){
+  setStatus('loading','Cargando datos desde Supabase...');
+  try{
+    // 1. Totales mensuales por hotel
+    const monthly = await SB.get('consumos',
+      '?select=hotel,mes,anio,sum_importe:importe.sum()&groupBy=hotel,mes,anio&order=anio,mes');
+    // Fallback: usar vista v_monthly
+    const vm = await SB.get('v_monthly','?select=*&order=anio,mes');
+    vm.forEach(row=>{
+      const k=`${row.hotel}_${row.mes}`;
+      if(!CACHE.monthly[k]) CACHE.monthly[k]={y25:0,y26:0};
+      if(row.anio===2025) CACHE.monthly[k].y25=parseFloat(row.total_importe)||0;
+      else CACHE.monthly[k].y26=parseFloat(row.total_importe)||0;
+      if(!CACHE.months_available.includes(row.mes)) CACHE.months_available.push(row.mes);
+    });
+
+    // 2. Por dept
+    const vd = await SB.get('v_monthly_dept','?select=*');
+    vd.forEach(row=>{
+      const kd=`${row.hotel}_${row.mes}_${row.dept_code}`;
+      if(!CACHE.monthly_dept[kd]) CACHE.monthly_dept[kd]={y25:0,y26:0,name:row.dept_name};
+      if(row.anio===2025) CACHE.monthly_dept[kd].y25+=parseFloat(row.total_importe)||0;
+      else CACHE.monthly_dept[kd].y26+=parseFloat(row.total_importe)||0;
+      // Totales de dept
+      if(!CACHE.dept_totals[row.dept_code]) CACHE.dept_totals[row.dept_code]={name:row.dept_name,y25:0,y26:0};
+      if(row.anio===2025) CACHE.dept_totals[row.dept_code].y25+=parseFloat(row.total_importe)||0;
+      else CACHE.dept_totals[row.dept_code].y26+=parseFloat(row.total_importe)||0;
+    });
+
+    // 3. Por categoria
+    const vc = await SB.get('v_monthly_cat','?select=*');
+    vc.forEach(row=>{
+      const kc=`${row.hotel}_${row.mes}_cat${row.cat_code}`;
+      if(!CACHE.monthly_cat[kc]) CACHE.monthly_cat[kc]={y25:0,y26:0,name:row.cat_name};
+      if(row.anio===2025) CACHE.monthly_cat[kc].y25+=parseFloat(row.total_importe)||0;
+      else CACHE.monthly_cat[kc].y26+=parseFloat(row.total_importe)||0;
+      if(!CACHE.fam_totals[row.cat_code]) CACHE.fam_totals[row.cat_code]={name:row.cat_name,y25:0,y26:0,by_hotel:{FIRA:{y25:0,y26:0},FRONT:{y25:0,y26:0}}};
+      if(row.anio===2025){CACHE.fam_totals[row.cat_code].y25+=parseFloat(row.total_importe)||0;CACHE.fam_totals[row.cat_code].by_hotel[row.hotel].y25+=parseFloat(row.total_importe)||0;}
+      else{CACHE.fam_totals[row.cat_code].y26+=parseFloat(row.total_importe)||0;CACHE.fam_totals[row.cat_code].by_hotel[row.hotel].y26+=parseFloat(row.total_importe)||0;}
+    });
+
+    // 4. Top productos (por familia - cargamos al seleccionar)
+    CACHE.last_fetch = new Date();
+    CACHE.months_available.sort((a,b)=>{
+      const order=['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+      return order.indexOf(a)-order.indexOf(b);
+    });
+
+    populateDropdowns();
+    initOverview();
+    setStatus('ok', `✓ ${CACHE.months_available.length * 2} datasets cargados · ${CACHE.last_fetch.toLocaleTimeString('es-ES')}`);
+    document.getElementById('update-date').textContent = CACHE.last_fetch.toLocaleDateString('es-ES');
+
+  }catch(err){
+    setStatus('error','Error de conexión: '+err.message+' — Verifica SUPABASE_URL y SUPABASE_ANON_KEY');
+    console.error(err);
+  }
+}
+
+async function loadTop20(cat, hotel){
+  const key=`${cat}_${hotel}`;
+  if(CACHE.top_products[key]) return CACHE.top_products[key];
+  try{
+    const hotelFilter = hotel==='ALL' ? '' : `&hotel=eq.${hotel}`;
+    const rows = await SB.get('v_top_products',
+      `?cat_code=eq.${cat}${hotelFilter}&select=prod_code,prod_name,anio,total_importe&order=total_importe.desc`);
+    const agg={};
+    rows.forEach(r=>{
+      if(!agg[r.prod_code]) agg[r.prod_code]={prod_code:r.prod_code,prod_name:r.prod_name,y25:0,y26:0};
+      if(r.anio===2025) agg[r.prod_code].y25+=parseFloat(r.total_importe)||0;
+      else agg[r.prod_code].y26+=parseFloat(r.total_importe)||0;
+    });
+    const sorted=Object.values(agg).sort((a,b)=>b.y26-a.y26).slice(0,20);
+    CACHE.top_products[key]=sorted;
+    return sorted;
+  }catch(e){console.error(e);return[];}
+}
+
+// ════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════
+function getMonths(){ return CACHE.months_available.length?CACHE.months_available:['ENE','FEB','MAR','ABR']; }
+function mGet(hotel,mes){ return CACHE.monthly[`${hotel}_${mes}`]||{y25:0,y26:0}; }
+function dGet(hotel,mes,dept){ return CACHE.monthly_dept[`${hotel}_${mes}_${dept}`]||{y25:0,y26:0}; }
+function cGet(hotel,mes,cat){ return CACHE.monthly_cat[`${hotel}_${mes}_cat${cat}`]||{y25:0,y26:0}; }
+function totHotel(hotel,yr){ return getMonths().reduce((s,m)=>{const d=mGet(hotel,m);return s+(yr===25?d.y25:d.y26);},0); }
+
+function populateDropdowns(){
+  const months=getMonths();
+  ['sel-h-mes','sel-f-mes'].forEach(id=>{
+    const el=document.getElementById(id);
+    const cur=el.value;
+    while(el.options.length>1) el.remove(1);
+    months.forEach(m=>{const o=new Option(MONTH_LABELS[m]||m,m);el.add(o);});
+    if(cur) el.value=cur;
+  });
+}
+
+// ════════════════════════════════════════════
+// TABS
+// ════════════════════════════════════════════
+function switchTab(name,btn){
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if(btn) btn.classList.add('active');
+  ({overview:initOverview,hotels:renderHotels,families:renderFamilies,special:renderSpecial,depts:initDepts,monthly:initMonthly,top20:renderTop20,pres:initPresentation})[name]?.();
+}
+
+// ════════════════════════════════════════════
+// OVERVIEW
+// ════════════════════════════════════════════
+function initOverview(){
+  const f25=totHotel('FIRA',25),f26=totHotel('FIRA',26);
+  const fr25=totHotel('FRONT',25),fr26=totHotel('FRONT',26);
+  const t25=f25+fr25,t26=f26+fr26,v=t26-t25;
+  document.getElementById('kpi-grid').innerHTML=`
+    <div class="kpi-card c-accent"><div class="kpi-label">Consumo total 2025</div><div class="kpi-value">${fmtE(t25)}</div><div class="kpi-sub neu">${getMonths().map(m=>MONTH_LABELS[m]||m).join(' · ')}</div></div>
+    <div class="kpi-card ${v>=0?'c-green':'c-red'}"><div class="kpi-label">Consumo total 2026</div><div class="kpi-value">${fmtE(t26)}</div><div class="kpi-sub ${v>=0?'up':'dn'}">${v>=0?'+':''}${fmtE(v)} (${pctS(t25,t26)})</div></div>
+    <div class="kpi-card c-accent"><div class="kpi-label">Fira 2026</div><div class="kpi-value" style="font-size:20px">${fmtE(f26)}</div><div class="kpi-sub ${pct(f25,f26)>=0?'up':'dn'}">${pctS(f25,f26)}</div></div>
+    <div class="kpi-card c-accent"><div class="kpi-label">Frontair 2026</div><div class="kpi-value" style="font-size:20px">${fmtE(fr26)}</div><div class="kpi-sub ${pct(fr25,fr26)>=0?'up':'dn'}">${pctS(fr25,fr26)}</div></div>
+    <div class="kpi-card c-gold"><div class="kpi-label">Meses cargados</div><div class="kpi-value" style="font-size:22px">${getMonths().length}</div><div class="kpi-sub neu">Actualizado en tiempo real</div></div>
+  `;
+  const cats=CAT_ORDER.filter(c=>CACHE.fam_totals[c]);
+  const labels=cats.map(c=>CAT_NAMES[c]||c);
+  mkChart('ch-fam-ov',{type:'bar',data:{labels,datasets:[bDs('2025',cats.map(c=>CACHE.fam_totals[c].y25),'#4f8eff'),bDs('2026',cats.map(c=>CACHE.fam_totals[c].y26),'#22c98a')]},options:{...COPTS,scales:{x:{ticks:{color:'#5a7090',font:{size:9},maxRotation:40}},y:{ticks:{color:'#5a7090',callback:v=>fmt(v/1000)+'k€'},grid:{color:'rgba(99,140,255,0.07)'}}}}});
+  const pieC=['#4f8eff','#22c98a','#f5c542','#f25c5c','#c97fe8','#f0a030','#7eb3ff','#56dba8','#ff8a8a','#ffd97a','#9a8eff'];
+  mkChart('ch-donut',{type:'doughnut',data:{labels,datasets:[{data:cats.map(c=>CACHE.fam_totals[c].y26),backgroundColor:pieC,borderWidth:1,borderColor:'rgba(255,255,255,0.06)'}]},options:{...COPTS,plugins:{legend:{display:true,position:'right',labels:{color:'#9aafcc',font:{size:10},boxWidth:10,padding:8}}}}});
+  const depts=['F4','F7','Z4','Z7'];
+  const maxV=Math.max(...depts.map(d=>Math.max(CACHE.dept_totals[d]?.y25||0,CACHE.dept_totals[d]?.y26||0)));
+  document.getElementById('dept-bars').innerHTML=depts.map(d=>{
+    const dt=CACHE.dept_totals[d]||{name:d,y25:0,y26:0};
+    return`<div class="dept-row">
+      <span class="dept-code">${d}</span>
+      <span class="dept-name">${dt.name}</span>
+      <div class="dept-bars">
+        <div class="dept-bar" style="width:${maxV?dt.y25/maxV*100:0}%;background:#4f8eff55"></div>
+        <div class="dept-bar" style="width:${maxV?dt.y26/maxV*100:0}%;background:${d[0]==='F'?'#4f8eff':'#22c98a'}"></div>
+      </div>
+      <div class="dept-vals"><div style="color:#5a7090;font-size:10px">${fmtE(dt.y25)}</div><div>${fmtE(dt.y26)}</div></div>
+      <div style="width:60px;text-align:right">${pbadge(dt.y25,dt.y26)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════
+// HOTELS
+// ════════════════════════════════════════════
+function renderHotels(){
+  const mes=document.getElementById('sel-h-mes').value;
+  const ms=mes==='all'?getMonths():[mes];
+  const fi=(yr)=>ms.reduce((s,m)=>s+mGet('FIRA',m)[yr===25?'y25':'y26'],0);
+  const fr=(yr)=>ms.reduce((s,m)=>s+mGet('FRONT',m)[yr===25?'y25':'y26'],0);
+  const [f25,f26,fr25,fr26]=[fi(25),fi(26),fr(25),fr(26)];
+  document.getElementById('hotel-kpis').innerHTML=`
+    <div class="kpi-card c-accent"><div class="kpi-label">Fira 2025</div><div class="kpi-value" style="font-size:20px">${fmtE(f25)}</div></div>
+    <div class="kpi-card ${pct(f25,f26)>=0?'c-green':'c-red'}"><div class="kpi-label">Fira 2026</div><div class="kpi-value" style="font-size:20px">${fmtE(f26)}</div><div class="kpi-sub ${pct(f25,f26)>=0?'up':'dn'}">${pctS(f25,f26)}</div></div>
+    <div class="kpi-card c-accent"><div class="kpi-label">Frontair 2025</div><div class="kpi-value" style="font-size:20px">${fmtE(fr25)}</div></div>
+    <div class="kpi-card ${pct(fr25,fr26)>=0?'c-green':'c-red'}"><div class="kpi-label">Frontair 2026</div><div class="kpi-value" style="font-size:20px">${fmtE(fr26)}</div><div class="kpi-sub ${pct(fr25,fr26)>=0?'up':'dn'}">${pctS(fr25,fr26)}</div></div>
+  `;
+  const M=getMonths(),L=M.map(m=>MONTH_LABELS[m]||m);
+  mkChart('ch-fira-m',{type:'line',data:{labels:L,datasets:[lDs('25',M.map(m=>mGet('FIRA',m).y25),'#4f8eff'),lDs('26',M.map(m=>mGet('FIRA',m).y26),'#4f8eff',true)]},options:{...COPTS,scales:{x:{ticks:{color:'#5a7090',font:{size:10}}},y:{ticks:{color:'#5a7090',callback:v=>fmt(v/1000)+'k€'},grid:{color:'rgba(99,140,255,0.07)'}}}}});
+  mkChart('ch-front-m',{type:'line',data:{labels:L,datasets:[lDs('25',M.map(m=>mGet('FRONT',m).y25),'#22c98a'),lDs('26',M.map(m=>mGet('FRONT',m).y26),'#22c98a',true)]},options:{...COPTS,scales:{x:{ticks:{color:'#5a7090',font:{size:10}}},y:{ticks:{color:'#5a7090',callback:v=>fmt(v/1000)+'k€'},grid:{color:'rgba(34,201,138,0.07)'}}}}});
+  let rows='';
+  getMonths().forEach(m=>{
+    if(mes!=='all'&&m!==mes)return;
+    const fi=mGet('FIRA',m),fr=mGet('FRONT',m);
+    rows+=`<tr><td>Fira</td><td>${MONTH_LABELS[m]||m}</td><td class="num">${fmtE(fi.y25)}</td><td class="num">${fmtE(fi.y26)}</td><td class="num">${delta(fi.y25,fi.y26)}</td><td class="num">${pctS(fi.y25,fi.y26)}</td><td>${pbadge(fi.y25,fi.y26)}</td></tr>`;
+    rows+=`<tr><td>Frontair</td><td>${MONTH_LABELS[m]||m}</td><td class="num">${fmtE(fr.y25)}</td><td class="num">${fmtE(fr.y26)}</td><td class="num">${delta(fr.y25,fr.y26)}</td><td class="num">${pctS(fr.y25,fr.y26)}</td><td>${pbadge(fr.y25,fr.y26)}</td></tr>`;
+  });
+  document.getElementById('hotel-tbody').innerHTML=rows;
+}
+
+// ════════════════════════════════════════════
+// FAMILIES
+// ════════════════════════════════════════════
+function famGet(cat,hotel,mes){
+  if(hotel==='all'&&mes==='all') return{y25:CACHE.fam_totals[cat]?.y25||0,y26:CACHE.fam_totals[cat]?.y26||0};
+  const hs=hotel==='all'?['FIRA','FRONT']:[hotel];
+  const ms=mes==='all'?getMonths():[mes];
+  let y25=0,y26=0;
+  hs.forEach(h=>ms.forEach(m=>{const d=cGet(h,m,cat);y25+=d.y25;y26+=d.y26;}));
+  return{y25,y26};
+}
+function renderFamilies(){
+  const hotel=document.getElementById('sel-f-hotel').value;
+  const mes=document.getElementById('sel-f-mes').value;
+  const cats=CAT_ORDER.filter(c=>CACHE.fam_totals[c]);
+  const labels=cats.map(c=>CAT_NAMES[c]||c);
+  const d25=cats.map(c=>famGet(c,hotel,mes).y25);
+  const d26=cats.map(c=>famGet(c,hotel,mes).y26);
+  mkChart('ch-fam-bar',{type:'bar',data:{labels,datasets:[bDs('2025',d25,'#4f8eff'),bDs('2026',d26,'#22c98a')]},options:{...COPTS,scales:{x:{ticks:{color:'#5a7090',font:{size:9},maxRotation:40}},y:{ticks:{color:'#5a7090',callback:v=>fmt(v/1000)+'k€'},grid:{color:'rgba(99,140,255,0.07)'}}}}});
+  let rows='';
+  cats.forEach(c=>{const{y25,y26}=famGet(c,hotel,mes);rows+=`<tr><td class="code">${c}</td><td>${CAT_NAMES[c]||c}</td><td class="num">${fmtE(y25)}</td><td class="num">${fmtE(y26)}</td><td class="num">${delta(y25,y26)}</td><td class="num">${pctS(y25,y26)}</td><td>${pbadge(y25,y26)}</td></tr>`;});
+  document.getElementById('fam-tbody').innerHTML=rows;
+}
+
+// ════════════════════════════════════════════
+// SPECIAL 87/90/93
+// ════════════════════════════════════════════
+function spGet(fam,hotel){
+  return getMonths().map(m=>{
+    const hs=hotel==='all'?['FIRA','FRONT']:[hotel];
+    let y25=0,y26=0;
+    hs.forEach(h=>{const d=cGet(h,m,fam);y25+=d.y25;y26+=d.y26;});
+    return{m,y25,y26};
+  });
+}
+function renderSpecial(){
+  const hotel=document.getElementById('sel-sp-hotel').value;
+  const d87=spGet('87',hotel),d90=spGet('90',hotel),d93=spGet('93',hotel);
+  const sum=(arr,k)=>arr.reduce((s,x)=>s+x[k],0);
+  const L=getMonths().map(m=>MONTH_LABELS[m]||m);
+  const kpis=[['87',d87,'#4f8eff','Comida'],['90',d90,'#22c98a','Precocinados'],['93',d93,'#f5c542','Panadería']];
+  document.getElementById('sp-kpis').innerHTML=kpis.map(([cat,data,col,nm])=>{
+    const t25=sum(data,'y25'),t26=sum(data,'y26');
+    return`<div class="panel"><div class="panel-title" style="color:${col}">Familia ${cat} — ${nm}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div class="kpi-card"><div class="kpi-label">2025</div><div class="kpi-value" style="font-size:18px">${fmtE(t25)}</div></div>
+        <div class="kpi-card"><div class="kpi-label">2026</div><div class="kpi-value" style="font-size:18px;color:${col}">${fmtE(t26)}</div><div class="kpi-sub ${pct(t25,t26)>=0?'up':'dn'}">${pctS(t25,t26)}</div></div>
+      </div></div>`;
+  }).join('');
+  mkChart('ch-sp-line',{type:'line',data:{labels:L,datasets:[
+    lDs('87 Comida 26',d87.map(x=>x.y26),'#4f8eff'),lDs('87 Comida 25',d87.map(x=>x.y25),'#4f8eff',true),
+    lDs('90 Prec. 26',d90.map(x=>x.y26),'#22c98a'),lDs('90 Prec. 25',d90.map(x=>x.y25),'#22c98a',true),
+    lDs('93 Pan. 26',d93.map(x=>x.y26),'#f5c542'),lDs('93 Pan. 25',d93.map(x=>x.y25),'#f5c542',true)
+  ]},options:{...COPTS,plugins:{legend:{display:true,position:'bottom',labels:{color:'#9aafcc',font:{size:10},boxWidth:10}}},scales:{x:{ticks:{color:'#5a7090'}},y:{ticks:{color:'#5a7090',callback:v=>fmt(v/1000)+'k€'},grid:{color:'rgba(99,140,255,0.07)'}}}}});
+  ['FIRA','FRONT'].forEach(h=>{
+    const el=document.getElementById('sp-'+h.toLowerCase());
+    let html=`<thead><tr><th>Mes</th><th class="num">87 '25</th><th class="num">87 '26</th><th class="num">90 '25</th><th class="num">90 '26</th><th class="num">93 '25</th><th class="num">93 '26</th></tr></thead><tbody>`;
+    getMonths().forEach(m=>{
+      const c87=cGet(h,m,'87'),c90=cGet(h,m,'90'),c93=cGet(h,m,'93');
+      html+=`<tr><td>${(MONTH_LABELS[m]||m).substring(0,3)}</td>
+        <td class="num">${fmtE(c87.y25)}</td><td class="num ${pct(c87.y25,c87.y26)>=0?'up':'dn'}">${fmtE(c87.y26)}</td>
+        <td class="num">${fmtE(c90.y25)}</td><td class="num ${pct(c90.y25,c90.y26)>=0?'up':'dn'}">${fmtE(c90.y26)}</td>
+        <td class="num">${fmtE(c93.y25)}</td><td class="num ${pct(c93.y25,c93.y26)>=0?'up':'dn'}">${fmtE(c93.y26)}</td>
+      </tr>`;
+    });
+    el.innerHTML=html+'</tbody>';
+  });
+}
+
+// ════════════════════════════════════════════
+// DEPTS
+// ════════════════════════════════════════════
+function initDepts(){
+  const depts=['F4','F7','Z4','Z7'];
+  const maxV=Math.max(...depts.map(d=>Math.max(CACHE.dept_totals[d]?.y25||0,CACHE.dept_totals[d]?.y26||0)));
+  document.getElementById('dept-cards').innerHTML=depts.map(d=>{
+    const dt=CACHE.dept_totals[d]||{name:d,y25:0,y26:0};
+    const v=dt.y26-dt.y25,p=pct(dt.y25,dt.y26);
+    const cls=d[0]==='F'?'fira':'front',col=cls==='fira'?'#4f8eff':'#22c98a';
+    return`<div class="hotel-card ${cls}">
+      <div class="hotel-name">${d} — ${dt.name}</div>
+      <div class="hotel-big">${fmtE(dt.y26)}</div>
+      <div class="hotel-sub">2026</div>
+      <div style="font-size:12px"><span class="${v>=0?'up':'dn'}">${v>=0?'+':''}${fmtE(v)}</span> <span style="margin-left:4px">${pbadge(dt.y25,dt.y26)}</span></div>
+      <div class="prog-bar"><div class="prog-fill" style="width:${maxV?dt.y26/maxV*100:0}%;background:${col}"></div></div>
+    </div>`;
+  }).join('');
+  const M=getMonths(),L=M.map(m=>MONTH_LABELS[m]||m);
+  const by25=M.map(m=>dGet('FIRA',m,'F4').y25+dGet('FRONT',m,'Z4').y25);
+  const by26=M.map(m=>dGet('FIRA',m,'F4').y26+dGet('FRONT',m,'Z4').y26);
+  const re25=M.map(m=>dGet('FIRA',m,'F7').y25+dGet('FRONT',m,'Z7').y25);
+  const re26=M.map(m=>dGet('FIRA',m,'F7').y26+dGet('FRONT',m,'Z7').y26);
+  mkChart('ch-dept-grp',{type:'bar',data:{labels:L,datasets:[bDs('Des.25',by25,'#4f8eff'),bDs('Des.26',by26,'#7eb3ff',.7),bDs('Rest.25',re25,'#22c98a'),bDs('Rest.26',re26,'#56dba8',.7)]},options:{...COPTS,scales:{x:{ticks:{color:'#5a7090'}},y:{ticks:{color:'#5a7090',callback:v=>fmt(v/1000)+'k€'},grid:{color:'rgba(99,140,255,0.07)'}}}}});
+  const DT=CACHE.dept_totals;
+  mkChart('ch-fira-split',{type:'bar',data:{labels:['F4 Desayuno','F7 Restaurante'],datasets:[bDs('25',[DT.F4?.y25||0,DT.F7?.y25||0],'#4f8eff'),bDs('26',[DT.F4?.y26||0,DT.F7?.y26||0],'#7eb3ff')]},options:{...COPTS,indexAxis:'y',scales:{x:{ticks:{color:'#5a7090',callback:v=>fmt(v/1000)+'k€'},grid:{color:'rgba(99,140,255,0.07)'}},y:{ticks:{color:'#9aafcc'}}}}});
+  mkChart('ch-front-split',{type:'bar',data:{labels:['Z4 Desayuno','Z7 Restaurante'],datasets:[bDs('25',[DT.Z4?.y25||0,DT.Z7?.y25||0],'#22c98a'),bDs('26',[DT.Z4?.y26||0,DT.Z7?.y26||0],'#56dba8')]},options:{...COPTS,indexAxis:'y',scales:{x:{ticks:{color:'#5a7090',callback:v=>fmt(v/1000)+'k€'},grid:{color:'rgba(34,201,138,0.07)'}},y:{ticks:{color:'#9aafcc'}}}}});
+}
+
+// ════════════════════════════════════════════
+// MONTHLY
+// ════════════════════════════════════════════
+function initMonthly(){
+  const M=getMonths(),L=M.map(m=>MONTH_LABELS[m]||m);
+  const fi25=M.map(m=>mGet('FIRA',m).y25),fi26=M.map(m=>mGet('FIRA',m).y26);
+  const fr25=M.map(m=>mGet('FRONT',m).y25),fr26=M.map(m=>mGet('FRONT',m).y26);
+  const t25=M.map((_,i)=>fi25[i]+fr25[i]),t26=M.map((_,i)=>fi26[i]+fr26[i]);
+  const vabs=t26.map((v,i)=>v-t25[i]),vpct=t26.map((v,i)=>pct(t25[i],v));
+  mkChart('ch-tot-line',{type:'line',data:{labels:L,datasets:[lDs('2025',t25,'#4f8eff'),lDs('2026',t26,'#22c98a')]},options:{...COPTS,scales:{x:{ticks:{color:'#5a7090'}},y:{ticks:{color:'#5a7090',callback:v=>fmt(v/1000)+'k€'},grid:{color:'rgba(99,140,255,0.07)'}}}}});
+  mkChart('ch-var-abs',{type:'bar',data:{labels:L,datasets:[{label:'Δ€',data:vabs,backgroundColor:vabs.map(v=>v>=0?'#22c98a88':'#f25c5c88'),borderColor:vabs.map(v=>v>=0?'#22c98a':'#f25c5c'),borderWidth:1,borderRadius:4}]},options:{...COPTS,scales:{x:{ticks:{color:'#5a7090'}},y:{ticks:{color:'#5a7090',callback:v=>(v>=0?'+':'')+fmt(v/1000)+'k€'},grid:{color:'rgba(99,140,255,0.07)'}}}}});
+  mkChart('ch-var-pct',{type:'bar',data:{labels:L,datasets:[{label:'Δ%',data:vpct,backgroundColor:vpct.map(v=>v>=0?'#22c98a55':'#f25c5c55'),borderColor:vpct.map(v=>v>=0?'#22c98a':'#f25c5c'),borderWidth:1,borderRadius:4}]},options:{...COPTS,scales:{x:{ticks:{color:'#5a7090'}},y:{ticks:{color:'#5a7090',callback:v=>(v>=0?'+':'')+v.toFixed(1)+'%'},grid:{color:'rgba(99,140,255,0.07)'}}}}});
+  let rows='';
+  M.forEach((m,i)=>{rows+=`<tr><td>${MONTH_LABELS[m]||m}</td><td class="num">${fmtE(fi25[i])}</td><td class="num">${fmtE(fi26[i])}</td><td class="num">${delta(fi25[i],fi26[i])}</td><td class="num">${fmtE(fr25[i])}</td><td class="num">${fmtE(fr26[i])}</td><td class="num">${delta(fr25[i],fr26[i])}</td><td class="num">${fmtE(t25[i])}</td><td class="num">${fmtE(t26[i])}</td><td class="num">${delta(t25[i],t26[i])}</td></tr>`;});
+  const sf25=fi25.reduce((a,b)=>a+b,0),sf26=fi26.reduce((a,b)=>a+b,0);
+  const sfr25=fr25.reduce((a,b)=>a+b,0),sfr26=fr26.reduce((a,b)=>a+b,0);
+  const st25=t25.reduce((a,b)=>a+b,0),st26=t26.reduce((a,b)=>a+b,0);
+  rows+=`<tr style="font-weight:600;border-top:1px solid rgba(79,142,255,0.2)"><td>TOTAL</td><td class="num">${fmtE(sf25)}</td><td class="num">${fmtE(sf26)}</td><td class="num">${delta(sf25,sf26)}</td><td class="num">${fmtE(sfr25)}</td><td class="num">${fmtE(sfr26)}</td><td class="num">${delta(sfr25,sfr26)}</td><td class="num">${fmtE(st25)}</td><td class="num">${fmtE(st26)}</td><td class="num">${delta(st25,st26)}</td></tr>`;
+  document.getElementById('monthly-tbody').innerHTML=rows;
+}
+
+// ════════════════════════════════════════════
+// TOP 20
+// ════════════════════════════════════════════
+async function renderTop20(){
+  const hotel=document.getElementById('sel-t-hotel').value;
+  const fam=document.getElementById('sel-t-fam').value;
+  const sort=document.getElementById('sel-t-sort').value;
+  setStatus('loading','Cargando top 20...');
+  let prods=await loadTop20(fam,hotel);
+  setStatus('ok',`✓ ${prods.length} productos cargados`);
+  if(sort==='imp25') prods=[...prods].sort((a,b)=>b.y25-a.y25);
+  else if(sort==='var_abs') prods=[...prods].sort((a,b)=>(b.y26-b.y25)-(a.y26-a.y25));
+  else if(sort==='var_pct') prods=[...prods].sort((a,b)=>pct(b.y25,b.y26)-pct(a.y25,a.y26));
+  prods=prods.slice(0,20);
+  const h=Math.max(400,prods.length*42+80);
+  document.getElementById('top20-chart-wrap').style.height=h+'px';
+  const labels=prods.map(p=>p.prod_name.replace(/^BC /,'').substring(0,30));
+  mkChart('ch-top20',{type:'bar',data:{labels,datasets:[bDs('2025',prods.map(p=>p.y25),'#4f8eff'),bDs('2026',prods.map(p=>p.y26),'#22c98a')]},options:{...COPTS,indexAxis:'y',plugins:{legend:{display:true,labels:{color:'#9aafcc',font:{size:10},boxWidth:10}}},scales:{x:{ticks:{color:'#5a7090',callback:v=>fmt(v/1000)+'k€'},grid:{color:'rgba(99,140,255,0.07)'}},y:{ticks:{color:'#9aafcc',font:{size:10}}}}}});
+  let rows='';
+  prods.forEach((p,i)=>{rows+=`<tr><td class="rank">${i+1}</td><td class="code">${p.prod_code}</td><td>${p.prod_name.replace(/^BC /,'')}</td><td class="num">${fmtE(p.y25)}</td><td class="num">${fmtE(p.y26)}</td><td class="num">${delta(p.y25,p.y26)}</td><td>${pbadge(p.y25,p.y26)}</td></tr>`;});
+  document.getElementById('top20-tbody').innerHTML=rows||'<tr><td colspan="7" style="text-align:center;padding:24px;color:#5a7090">Sin datos</td></tr>';
+}
+
+// ════════════════════════════════════════════
+// UPLOAD → SUPABASE
+// ════════════════════════════════════════════
+document.getElementById('upload-zone').addEventListener('dragover',e=>{e.preventDefault();e.currentTarget.classList.add('drag-over');});
+document.getElementById('upload-zone').addEventListener('dragleave',e=>e.currentTarget.classList.remove('drag-over'));
+document.getElementById('upload-zone').addEventListener('drop',e=>{e.preventDefault();e.currentTarget.classList.remove('drag-over');handleFiles(e.dataTransfer.files);});
+
+async function handleFiles(files){
+  const prog=document.getElementById('upload-progress');
+  const fill=document.getElementById('prog-fill');
+  const txt=document.getElementById('prog-text');
+  prog.style.display='block';
+  for(let i=0;i<files.length;i++){
+    const file=files[i];
+    txt.textContent=`Procesando ${file.name}...`;
+    fill.style.width=((i/files.length)*50)+'%';
+    if(!file.name.match(/\.xlsx?$/i)){alert('Solo .xlsx');continue;}
+    const rows=await parseExcelFile(file);
+    if(!rows.length){alert('No se encontraron datos en '+file.name);continue;}
+    fill.style.width=((i/files.length)*70+30)+'%';
+    txt.textContent=`Subiendo ${rows.length} líneas a Supabase...`;
+    try{
+      const batchId=crypto.randomUUID();
+      const det=detectFileMeta(file.name);
+      await SB.post('upload_batches',[{id:batchId,filename:file.name,hotel:det.hotel,mes:det.mes,anio:2025,row_count:rows.length}]);
+      // Insert in chunks of 500
+      const rowsWithBatch=rows.map(r=>({...r,upload_batch:batchId}));
+      for(let j=0;j<rowsWithBatch.length;j+=500){
+        await SB.post('consumos',rowsWithBatch.slice(j,j+500));
+        fill.style.width=Math.min(95,(i/files.length)*100+(j/rowsWithBatch.length)*30)+'%';
+      }
+      addFileTag(file.name,'#22c98a');
+      if(!CACHE.months_available.includes(det.mes)) CACHE.months_available.push(det.mes);
+    }catch(err){
+      alert('Error subiendo '+file.name+': '+err.message);
+      addFileTag(file.name,'#f25c5c');
+    }
+  }
+  fill.style.width='100%';
+  txt.textContent='✓ Completado — Recargando datos...';
+  // Limpiar caché y recargar
+  CACHE={monthly:{},monthly_dept:{},monthly_cat:{},top_products:{},dept_totals:{},fam_totals:{},months_available:[],last_fetch:null};
+  await loadAllData();
+  setTimeout(()=>{prog.style.display='none';fill.style.width='0%';},2000);
+}
+
+function detectFileMeta(filename){
+  const fn=filename.toUpperCase();
+  const hotel=(fn.includes('FRONT')||fn.includes('Z4')||fn.includes('Z7'))?'FRONT':'FIRA';
+  const mesMap={ENE:'ENE',FEB:'FEB',MAR:'MAR',ABR:'ABR',MAY:'MAY',JUN:'JUN',JUL:'JUL',AGO:'AGO',SEP:'SEP',OCT:'OCT',NOV:'NOV',DIC:'DIC'};
+  let mes='UNK';
+  Object.keys(mesMap).forEach(k=>{if(fn.includes(k)) mes=mesMap[k];});
+  return{hotel,mes};
+}
+
+async function parseExcelFile(file){
+  return new Promise(resolve=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      try{
+        const wb=XLSX.read(e.target.result,{type:'array'});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+        const det=detectFileMeta(file.name);
+        const rows=[];
+        let dept=null,deptName=null,cat=null,catName=null;
+        raw.forEach(row=>{
+          const c0=String(row[0]||''),c2=String(row[2]||''),c3=String(row[3]||'');
+          if(c0.includes('Departamento:')){dept=c2.trim();deptName=c3.trim();}
+          else if(c0.includes('Categoría:')){cat=c2.trim();catName=c3.trim();}
+          else if(c0.match(/^\d{5}/)){
+            const u25=Math.abs(parseFloat(row[5])||0),i25=Math.abs(parseFloat(row[6])||0);
+            const u26=Math.abs(parseFloat(row[11])||0),i26=Math.abs(parseFloat(row[12])||0);
+            const pn=(String(row[2]||'')).trim();
+            if(u25||i25) rows.push({hotel:det.hotel,mes:det.mes,anio:2025,dept_code:dept,dept_name:deptName,cat_code:cat,cat_name:catName,prod_code:String(row[0]),prod_name:pn,uds:u25,importe:i25});
+            if(u26||i26) rows.push({hotel:det.hotel,mes:det.mes,anio:2026,dept_code:dept,dept_name:deptName,cat_code:cat,cat_name:catName,prod_code:String(row[0]),prod_name:pn,uds:u26,importe:i26});
+          }
+        });
+        resolve(rows);
+      }catch(err){console.error(err);resolve([]);}
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function addFileTag(name,color='#4f8eff'){
+  const list=document.getElementById('file-tags');
+  const tag=document.createElement('div');tag.className='file-tag';
+  tag.innerHTML=`<span style="color:${color}">●</span> ${name} <span class="rm" onclick="this.parentElement.remove()">✕</span>`;
+  list.appendChild(tag);
+}
+
+// ════════════════════════════════════════════
+// EXPORT
+// ════════════════════════════════════════════
+function exportCSV(){
+  let csv='Hotel,Mes,Familia,Cod,2025_EUR,2026_EUR,Delta_EUR,Delta_pct\n';
+  ['FIRA','FRONT'].forEach(h=>{
+    getMonths().forEach(m=>{
+      CAT_ORDER.forEach(cat=>{
+        const d=cGet(h,m,cat);
+        if(d.y25||d.y26){
+          const v=(d.y26-d.y25).toFixed(2),p=pct(d.y25,d.y26).toFixed(1);
+          csv+=`${h},${MONTH_LABELS[m]||m},${CAT_NAMES[cat]||cat},${cat},${d.y25.toFixed(2)},${d.y26.toFixed(2)},${v},${p}%\n`;
+        }
+      });
+    });
+  });
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download='Zelasgo_Consumos.csv';a.click();
+}
+
+// ════════════════════════════════════════════
+// PRESENTATION
+// ════════════════════════════════════════════
+let slideIdx=0;
+const SLIDES=[
+  {title:'Resumen Ejecutivo',sub:'Zelasgo S.L.U · Comparativa 2025 vs 2026',fn:()=>{const f25=totHotel('FIRA',25),f26=totHotel('FIRA',26),fr25=totHotel('FRONT',25),fr26=totHotel('FRONT',26),t25=f25+fr25,t26=f26+fr26,v=t26-t25;return`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px"><div class="kpi-card c-accent"><div class="kpi-label">Total 2025</div><div class="kpi-value" style="font-size:22px">${fmtE(t25)}</div></div><div class="kpi-card ${v>=0?'c-green':'c-red'}"><div class="kpi-label">Total 2026</div><div class="kpi-value" style="font-size:22px">${fmtE(t26)}</div><div class="kpi-sub ${v>=0?'up':'dn'}">${v>=0?'+':''}${fmtE(v)} (${pctS(t25,t26)})</div></div><div class="kpi-card c-gold"><div class="kpi-label">Período</div><div class="kpi-value" style="font-size:14px;margin-top:4px">${getMonths().map(m=>(MONTH_LABELS[m]||m).substring(0,3)).join(' · ')}</div></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div class="hotel-card fira"><div class="hotel-name">Fira Congress F4·F7</div><div class="hotel-big">${fmtE(f26)}</div><div class="hotel-sub">2026 · ${pbadge(f25,f26)}</div></div><div class="hotel-card front"><div class="hotel-name">Frontair Congress Z4·Z7</div><div class="hotel-big">${fmtE(fr26)}</div><div class="hotel-sub">2026 · ${pbadge(fr25,fr26)}</div></div></div>`;}},
+  {title:'Departamentos F4·F7·Z4·Z7',sub:'Desayuno vs Restaurante',fn:()=>['F4','F7','Z4','Z7'].map(d=>{const dt=CACHE.dept_totals[d]||{name:d,y25:0,y26:0};const v=dt.y26-dt.y25;return`<div class="hotel-card ${d[0]==='F'?'fira':'front'}" style="margin-bottom:10px"><div class="hotel-name">${d} — ${dt.name}</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:center"><div><div style="font-size:10px;color:#5a7090">2025</div><div style="font-size:16px;font-weight:600">${fmtE(dt.y25)}</div></div><div><div style="font-size:10px;color:#5a7090">2026</div><div style="font-size:16px;font-weight:600">${fmtE(dt.y26)}</div></div><div style="text-align:right"><span class="${v>=0?'up':'dn'}" style="font-size:13px;font-weight:600">${v>=0?'+':''}${fmtE(v)}</span><br>${pbadge(dt.y25,dt.y26)}</div></div></div>`;}).join('')},
+  {title:'Top Familias',sub:'Análisis acumulado todas las familias',fn:()=>`<div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Cód.</th><th>Familia</th><th class="num">2025</th><th class="num">2026</th><th class="num">Δ €</th><th>Var.</th></tr></thead><tbody>${CAT_ORDER.filter(c=>CACHE.fam_totals[c]).map(c=>{const{y25,y26}=CACHE.fam_totals[c];return`<tr><td class="code">${c}</td><td>${(CAT_NAMES[c]||c).replace(/^\d+ – /,'')}</td><td class="num">${fmtE(y25)}</td><td class="num">${fmtE(y26)}</td><td class="num">${delta(y25,y26)}</td><td>${pbadge(y25,y26)}</td></tr>`;}).join('')}</tbody></table></div>`},
+  {title:'Familias 87 · 90 · 93',sub:'Comida, Precocinados y Panadería',fn:()=>{const items=[['87','#4f8eff'],['90','#22c98a'],['93','#f5c542']];return`<div class="g3" style="margin-bottom:16px">${items.map(([cat,col])=>{const ft=CACHE.fam_totals[cat]||{y25:0,y26:0,by_hotel:{FIRA:{y25:0,y26:0},FRONT:{y25:0,y26:0}}};return`<div class="panel"><div class="panel-title" style="color:${col}">${CAT_NAMES[cat]}</div><div style="font-size:26px;font-weight:600;color:${col};margin:8px 0">${fmtE(ft.y26)}</div>${delta(ft.y25,ft.y26)} ${pbadge(ft.y25,ft.y26)}<div style="font-size:11px;color:#5a7090;margin-top:8px">Fira: ${fmtE(ft.by_hotel?.FIRA?.y26||0)} · Front: ${fmtE(ft.by_hotel?.FRONT?.y26||0)}</div></div>`;}).join('')}</div>`;}},
+  {title:'Evolución Mensual',sub:'Comparativa mes a mes',fn:()=>`<div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Mes</th><th class="num">Fira 25</th><th class="num">Fira 26</th><th>Var.</th><th class="num">Front 25</th><th class="num">Front 26</th><th>Var.</th><th class="num">Total 25</th><th class="num">Total 26</th><th>Var.</th></tr></thead><tbody>${getMonths().map(m=>{const fi=mGet('FIRA',m),fr=mGet('FRONT',m),t25=fi.y25+fr.y25,t26=fi.y26+fr.y26;return`<tr><td>${MONTH_LABELS[m]||m}</td><td class="num">${fmtE(fi.y25)}</td><td class="num">${fmtE(fi.y26)}</td><td>${pbadge(fi.y25,fi.y26)}</td><td class="num">${fmtE(fr.y25)}</td><td class="num">${fmtE(fr.y26)}</td><td>${pbadge(fr.y25,fr.y26)}</td><td class="num">${fmtE(t25)}</td><td class="num">${fmtE(t26)}</td><td>${pbadge(t25,t26)}</td></tr>`;}).join('')}</tbody></table></div>`},
+  {title:'Conclusiones',sub:'Puntos de acción para dirección',fn:()=>`
+    <div class="alert alert-red"><div class="alert-title">⚠ Fruta y Verdura (91)</div><p>Mayor caída en valor absoluto. Revisar estacionalidad, precios de temporada y cambios en oferta.</p></div>
+    <div class="alert alert-red"><div class="alert-title">⚠ Restaurante F7 — Fira Congress</div><p>Reducción concentrada en Carnes y Fruta/Verdura. Contrastar con ocupación y evolución del menú.</p></div>
+    <div class="alert alert-amber"><div class="alert-title">⚡ Abril 2026 — Fira Congress</div><p>Caída pronunciada en abril. Verificar si responde a calendario de eventos o cambio operativo.</p></div>
+    <div class="alert alert-green"><div class="alert-title">✓ Lácteos/Embutidos (92)</div><p>Familia de mayor peso con estabilidad interanual. Jamón serrano y huevos traccionan el crecimiento.</p></div>
+    <div class="alert alert-blue"><div class="alert-title">↗ Oportunidad — Familia 87 Comida</div><p>Incremento consistente. Café de grano y bollería artesanal lideran. Revisar mix y márgenes.</p></div>
+  `}
+];
+function initPresentation(){
+  slideIdx=0;
+  document.getElementById('slide-dots').innerHTML=SLIDES.map((_,i)=>`<div class="slide-dot${i===0?' active':''}" onclick="goSlide(${i})"></div>`).join('');
+  renderSlide();
+}
+function renderSlide(){
+  const s=SLIDES[slideIdx];
+  document.getElementById('slide-container').innerHTML=`<div class="slide"><div class="slide-number">ZELASGO S.L.U · ${slideIdx+1}/${SLIDES.length}</div><div class="slide-title">${s.title}</div><div class="slide-subtitle">${s.sub}</div><div>${s.fn()}</div></div>`;
+  document.querySelectorAll('.slide-dot').forEach((d,i)=>d.classList.toggle('active',i===slideIdx));
+  document.getElementById('prev-btn').disabled=slideIdx===0;
+  document.getElementById('next-btn').disabled=slideIdx===SLIDES.length-1;
+}
+function prevSlide(){if(slideIdx>0){slideIdx--;renderSlide();}}
+function nextSlide(){if(slideIdx<SLIDES.length-1){slideIdx++;renderSlide();}}
+function goSlide(i){slideIdx=i;renderSlide();}
+
+// ════════════════════════════════════════════
+// ANIMATED BACKGROUND
+// ════════════════════════════════════════════
+(()=>{
+  const c=document.getElementById('bg-canvas'),ctx=c.getContext('2d');
+  let W,H,t=0;
+  const pts=Array.from({length:65},()=>({x:Math.random()*1400,y:Math.random()*900,vx:(Math.random()-.5)*.22,vy:(Math.random()-.5)*.14,r:Math.random()*1.6+.4,a:Math.random()*.45+.1,col:Math.random()>.5?'79,142,255':'34,201,138'}));
+  function resize(){W=c.width=window.innerWidth;H=c.height=window.innerHeight;}
+  resize();window.addEventListener('resize',resize);
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    ctx.strokeStyle='rgba(99,140,255,0.035)';ctx.lineWidth=1;
+    for(let i=0;i<=6;i++){const x=W/6*i;ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();const y=H/6*i;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+    for(let i=-3;i<6;i++){const o=i*(W/4);ctx.strokeStyle='rgba(79,142,255,0.025)';ctx.beginPath();ctx.moveTo(o,0);ctx.lineTo(o+H*.55,H);ctx.stroke();}
+    [[W*.28+Math.sin(t*.0007)*W*.14,H*.28+Math.cos(t*.0006)*H*.1,300,'79,142,255',0.055],[W*.72+Math.cos(t*.0008)*W*.11,H*.62+Math.sin(t*.001)*H*.11,240,'34,201,138',0.045]].forEach(([gx,gy,gr,col,a])=>{const g=ctx.createRadialGradient(gx,gy,0,gx,gy,gr);g.addColorStop(0,`rgba(${col},${a})`);g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);});
+    pts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<0)p.x=W;if(p.x>W)p.x=0;if(p.y<0)p.y=H;if(p.y>H)p.y=0;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=`rgba(${p.col},${p.a})`;ctx.fill();});
+    for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){const dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.sqrt(dx*dx+dy*dy);if(d<115){ctx.strokeStyle=`rgba(79,142,255,${(1-d/115)*0.07})`;ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);ctx.stroke();}}
+    t++;requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', loadAllData);
+</script>
+</body>
+</html>
